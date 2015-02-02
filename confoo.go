@@ -1,61 +1,43 @@
-package confetto
+package confoo
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 
 	"gopkg.in/yaml.v2"
 )
 
-var (
-	regs       map[string]interface{}
-	configured bool
-	errors     []string
-)
+const confVar = "CONFOO_CONFIG_FILE"
 
-func saveError(format string, a ...interface{}) {
+func errorPanic(format string, a ...interface{}) {
 	m := fmt.Sprintf(format, a...)
-	errors = append(errors, m)
+	m2 := "CONFOO - " + m
+	panic(m2)
 }
 
-func Register(path string, dest interface{}) {
-	// FIXME in realtà basterebbe verificare che sia settabile
-	if reflect.TypeOf(dest).Kind() != reflect.Ptr {
-		// FIXME
-		panic("destination is not a pointer type")
+func Configure(path string, target interface{}) {
+	confFile := os.Getenv("CONFOO_CONFIG_FILE")
+	if confFile == "" {
+		errorPanic(confVar + " is not set")
 	}
-	if regs == nil {
-		regs = make(map[string]interface{})
-	}
-	if _, ok := regs[path]; ok {
-		saveError("%s: path already registerd")
-	}
-	regs[path] = dest
-}
-
-func Configure(yamlData []byte) {
-	if configured {
-		panic("already configured")
-	}
-	configured = true
-	conf := make(map[interface{}]interface{})
-	err := yaml.Unmarshal(yamlData, &conf)
+	data, err := ioutil.ReadFile(confFile)
 	if err != nil {
-		panic("cannot decode yaml data")
+		errorPanic(err.Error())
+		panic(err)
 	}
 
-	for path, dest := range regs {
-		subConf := getSubConf(path, conf)
-		if subConf != nil {
-			configPath(path, reflect.ValueOf(dest), subConf)
-		}
+	conf := make(map[interface{}]interface{})
+	err = yaml.Unmarshal(data, &conf)
+	if err != nil {
+		errorPanic("cannot decode yaml data")
 	}
 
-	//FIXME
-	fmt.Printf("%d error(s)\n", len(errors))
-	for _, m := range errors {
-		fmt.Println(m)
+	subConf := getSubConf(path, conf)
+	if subConf != nil {
+		configPath(path, reflect.ValueOf(target), subConf)
 	}
 }
 
@@ -64,8 +46,7 @@ func getSubConf(path string, conf interface{}) interface{} {
 	for _, p := range strings.Split(path, ".") {
 		m, ok := subConf.(map[interface{}]interface{})
 		if !ok {
-			saveError("%s: path not found", path)
-			return nil
+			errorPanic("%s: path not found", path)
 		}
 
 		subConf, ok = m[p]
@@ -82,28 +63,24 @@ func configStruct(path string, dest reflect.Value, conf interface{}) {
 	}
 	confMap, ok := conf.(map[interface{}]interface{})
 	if !ok {
-		saveError("%s: expected map not found", path)
-		return
+		errorPanic("%s: expected map not found", path)
 	}
 	for k, subConf := range confMap {
 		kk, ok := k.(string)
 		if !ok {
-			saveError("%s.%v: map key is not a string", path, k)
-			return
+			errorPanic("%s.%v: map key is not a string", path, k)
 		}
 		// TODO Title is arbitrary
 		fieldName := strings.Title(kk)
 		fieldVal := dest.FieldByName(fieldName)
 		if fieldVal.Kind() == reflect.Invalid {
-			saveError("%s.%v: field not present in target struct", path, k)
-			return
+			errorPanic("%s.%v: field not present in target struct", path, k)
 		}
 		configPath(path+"."+kk, dest.FieldByName(fieldName), subConf)
 	}
 }
 
 func configPath(path string, dest reflect.Value, conf interface{}) {
-	fmt.Printf("path=%s %v\n", path, dest)
 	destKind := dest.Kind()
 	switch destKind {
 	case reflect.Ptr:
@@ -117,12 +94,10 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 		if confKind != destKind {
 			dType := dest.Type()
 			cType := confValue.Type()
-			saveError("%s: target type %v != conf type %v", dType, cType)
-			return
+			errorPanic("%s: target type %v != conf type %v", path, dType, cType)
 		}
 		dest.Set(confValue)
 	default:
-		saveError("%s: conf type %v not handled", dest.Type())
-		return
+		errorPanic("%s: conf type %v not handled", dest.Type())
 	}
 }
