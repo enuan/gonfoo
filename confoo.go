@@ -57,6 +57,14 @@ func getSubConf(path string, conf interface{}) interface{} {
 	return subConf
 }
 
+func normalizeKey(s string) string {
+	parts := strings.Split(s, "_")
+	for i, p := range parts {
+		parts[i] = strings.Title(p)
+	}
+	return strings.Join(parts, "")
+}
+
 func configStruct(path string, dest reflect.Value, conf interface{}) {
 	if conf == nil {
 		return
@@ -70,8 +78,7 @@ func configStruct(path string, dest reflect.Value, conf interface{}) {
 		if !ok {
 			errorPanic("%s.%v: map key is not a string", path, k)
 		}
-		// TODO Title is arbitrary
-		fieldName := strings.Title(kk)
+		fieldName := normalizeKey(kk)
 		fieldVal := dest.FieldByName(fieldName)
 		if fieldVal.Kind() == reflect.Invalid {
 			errorPanic("%s.%v: field not present in target struct", path, k)
