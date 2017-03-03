@@ -26,7 +26,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/enuan/confoo.go"
+	"github.com/enuan/gonfoo"
 )
 
 var config struct {
