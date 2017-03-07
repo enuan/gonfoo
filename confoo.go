@@ -18,7 +18,9 @@ func errorPanic(format string, a ...interface{}) {
 	panic(m2)
 }
 
-func Configure(path string, target interface{}) {
+var confData map[interface{}]interface{}
+
+func init() {
 	confFile := os.Getenv("CONFOO_CONFIG_FILE")
 	if confFile == "" {
 		errorPanic(confVar + " is not set")
@@ -29,13 +31,15 @@ func Configure(path string, target interface{}) {
 		panic(err)
 	}
 
-	conf := make(map[interface{}]interface{})
-	err = yaml.Unmarshal(data, &conf)
+	confData = make(map[interface{}]interface{})
+	err = yaml.Unmarshal(data, &confData)
 	if err != nil {
 		errorPanic("cannot decode yaml data")
 	}
+}
 
-	subConf := getSubConf(path, conf)
+func Configure(path string, target interface{}) {
+	subConf := getSubConf(path, confData)
 	if subConf != nil {
 		configPath(path, reflect.ValueOf(target), subConf)
 	}
@@ -76,12 +80,16 @@ func configStruct(path string, dest reflect.Value, conf interface{}) {
 	for k, subConf := range confMap {
 		kk, ok := k.(string)
 		if !ok {
-			errorPanic("%s.%v: map key is not a string", path, k)
+			//FIXME log event if CONFOO_DEBUG is set
+			//errorPanic("%s.%v: map key is not a string", path, k)
+			continue
 		}
 		fieldName := normalizeKey(kk)
 		fieldVal := dest.FieldByName(fieldName)
 		if fieldVal.Kind() == reflect.Invalid {
-			errorPanic("%s.%v: field not present in target struct", path, k)
+			//FIXME log event if CONFOO_DEBUG is set
+			//errorPanic("%s.%v: field not present in target struct", path, k)
+			continue
 		}
 		configPath(path+"."+kk, dest.FieldByName(fieldName), subConf)
 	}
