@@ -113,6 +113,6 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 		}
 		dest.Set(confValue)
 	default:
-		errorPanic("%s: conf type %v not handled", dest.Type())
+		errorPanic("%s: conf type %v not handled", path, dest.Type())
 	}
 }
