@@ -103,7 +103,7 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 	case reflect.Struct:
 		configStruct(path, dest, conf)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.String, reflect.Bool:
+		reflect.String, reflect.Bool, reflect.Map:
 		confValue := reflect.ValueOf(conf)
 		confKind := confValue.Kind()
 		if confKind != destKind {
