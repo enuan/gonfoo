@@ -5,9 +5,10 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const confVar = "CONFOO_CONFIG_FILE"
@@ -111,6 +112,13 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 			errorPanic("%s: target type %v != conf type %v", path, dType, cType)
 		}
 		dest.Set(confValue)
+	case reflect.Slice:
+		for i, el := range conf.([]interface{}) {
+			idx := strconv.Itoa(i)
+			elVal := reflect.New(dest.Type().Elem())
+			configPath(path+"."+idx, elVal, el)
+			dest.Set(reflect.Append(dest, elVal.Elem()))
+		}
 	default:
 		errorPanic("%s: conf type %v not handled", path, dest.Type())
 	}
