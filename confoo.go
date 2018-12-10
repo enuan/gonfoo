@@ -28,7 +28,6 @@ func init() {
 	data, err := ioutil.ReadFile(confFile)
 	if err != nil {
 		errorPanic(err.Error())
-		panic(err)
 	}
 
 	confData = make(map[interface{}]interface{})
