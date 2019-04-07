@@ -100,10 +100,12 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 	switch destKind {
 	case reflect.Ptr:
 		configPath(path, dest.Elem(), conf)
+	case reflect.Interface:
+		dest.Set(reflect.ValueOf(conf))
 	case reflect.Struct:
 		configStruct(path, dest, conf)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.String, reflect.Bool, reflect.Map:
+		reflect.String, reflect.Bool:
 		confValue := reflect.ValueOf(conf)
 		confKind := confValue.Kind()
 		if confKind != destKind {
@@ -118,6 +120,14 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 			elVal := reflect.New(dest.Type().Elem())
 			configPath(path+"."+idx, elVal, el)
 			dest.Set(reflect.Append(dest, elVal.Elem()))
+		}
+	case reflect.Map:
+		dest.Set(reflect.MakeMap(dest.Type()))
+		for k, el := range conf.(map[interface{}]interface{}) {
+			kk := k.(string)
+			elVal := reflect.New(dest.Type().Elem())
+			configPath(path+"."+kk, elVal, el)
+			dest.SetMapIndex(reflect.ValueOf(k), elVal.Elem())
 		}
 	default:
 		errorPanic("%s: conf type %v not handled", path, dest.Type())
