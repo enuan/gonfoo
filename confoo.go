@@ -74,6 +74,19 @@ func normalizeKey(s string) string {
 	return strings.Join(parts, "")
 }
 
+func replaceKey(s string) string {
+	if s == "$hostname" {
+		hostname, error := os.Hostname()
+		if error != nil {
+			errorPanic("Error while retrieving the hostname: %s", error)
+		}
+
+		return hostname
+	}
+
+	return s
+}
+
 func configStruct(path string, dest reflect.Value, conf interface{}) {
 	if conf == nil {
 		return
@@ -130,9 +143,10 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 		dest.Set(reflect.MakeMap(dest.Type()))
 		for k, el := range conf.(map[interface{}]interface{}) {
 			kk := k.(string)
+			kk = replaceKey(kk)
 			elVal := reflect.New(dest.Type().Elem())
 			configPath(path+"."+kk, elVal, el)
-			dest.SetMapIndex(reflect.ValueOf(k), elVal.Elem())
+			dest.SetMapIndex(reflect.ValueOf(kk), elVal.Elem())
 		}
 	default:
 		errorPanic("%s: conf type %v not handled", path, dest.Type())
