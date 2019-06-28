@@ -11,7 +11,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-const confVar = "CONFOO_CONFIG_FILE"
+const confVar = "CONFOO_CONFIG or CONFOO_CONFIG_FILE"
 
 func errorPanic(format string, a ...interface{}) {
 	m := fmt.Sprintf(format, a...)
@@ -22,10 +22,15 @@ func errorPanic(format string, a ...interface{}) {
 var confData map[interface{}]interface{}
 
 func init() {
-	confFile := os.Getenv("CONFOO_CONFIG_FILE")
-	if confFile == "" {
-		errorPanic(confVar + " is not set")
+	confFile, confReceived := os.LookupEnv("CONFOO_CONFIG")
+	if !confReceived {
+		confFile, confReceived = os.LookupEnv("CONFOO_CONFIG_FILE")
+
+		if !confReceived {
+			errorPanic(confVar + " is not set")
+		}
 	}
+
 	data, err := ioutil.ReadFile(confFile)
 	if err != nil {
 		errorPanic(err.Error())
