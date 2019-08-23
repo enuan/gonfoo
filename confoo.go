@@ -43,11 +43,33 @@ func init() {
 	}
 }
 
+//Configure loads the value of the path of the yml of the CONFOO_CONFIG_FILE into target
 func Configure(path string, target interface{}) {
 	subConf := getSubConf(path, confData)
 	if subConf != nil {
 		configPath(path, reflect.ValueOf(target), subConf)
 	}
+}
+
+//ConfigureFromFile reads ymlFile and loads the value of the path into target
+func ConfigureFromFile(ymlFile, path string, target interface{}) error {
+
+	data, err := ioutil.ReadFile(ymlFile)
+	if err != nil {
+		return err
+	}
+
+	confData := make(map[interface{}]interface{})
+	err = yaml.Unmarshal(data, &confData)
+	if err != nil {
+		return err
+	}
+
+	subConf := getSubConf(path, confData)
+	if subConf != nil {
+		configPath(path, reflect.ValueOf(target), subConf)
+	}
+	return nil
 }
 
 func getSubConf(path string, conf interface{}) interface{} {
