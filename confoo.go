@@ -155,6 +155,7 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 		}
 		dest.Set(confValue)
 	case reflect.Slice:
+		dest.Set(dest.Slice(0, 0))
 		for i, el := range conf.([]interface{}) {
 			idx := strconv.Itoa(i)
 			elVal := reflect.New(dest.Type().Elem())
