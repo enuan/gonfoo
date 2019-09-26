@@ -1,3 +1,8 @@
+# OS specific files
+.DS_Store
+.Trash-*
+Thumbs.db
+
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
 *.a
