@@ -139,6 +139,9 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 	destKind := dest.Kind()
 	switch destKind {
 	case reflect.Ptr:
+		if dest.Type().Elem().Kind() == reflect.Struct && dest.IsNil() {
+			dest.Set(reflect.New(dest.Type().Elem()))
+		}
 		configPath(path, dest.Elem(), conf)
 	case reflect.Interface:
 		dest.Set(reflect.ValueOf(conf))
