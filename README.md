@@ -16,6 +16,12 @@ test:
         params: 
             p1: mega
             flag: true
+		items:
+			- field_one: value
+			  field_two: value
+		options:
+			username: john_connor
+			password: qwerty
 ```
 
 Sample executable:
@@ -29,6 +35,11 @@ import (
 	"github.com/enuan/gonfoo"
 )
 
+type Options struct {
+	Username string
+	Password string
+}
+
 var config struct {
 	Host   string
 	Port   int
@@ -37,6 +48,13 @@ var config struct {
 		P2   string
 		Flag bool
 	}
+	// slices of any structs
+	Items []struct {
+		FieldOne string
+		FieldTwo string
+	}
+	// Options pointer fields
+	Options *Options
 }
 
 func init() {
