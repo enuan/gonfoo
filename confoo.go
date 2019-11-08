@@ -109,6 +109,21 @@ func replaceKey(s string) string {
 	return s
 }
 
+func replaceValue(s string) string {
+	if s == "$public_hostname" {
+		content, err := ioutil.ReadFile("/etc/public_hostname")
+		if err != nil {
+			fmt.Println(err)
+			return s
+		}
+
+		public_hostname := strings.TrimSuffix(string(content), "\n")
+		return public_hostname
+	}
+
+	return s
+}
+
 func configStruct(path string, dest reflect.Value, conf interface{}) {
 	if conf == nil {
 		return
@@ -148,7 +163,17 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 	case reflect.Struct:
 		configStruct(path, dest, conf)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.String, reflect.Bool:
+		reflect.Bool:
+		confValue := reflect.ValueOf(conf)
+		confKind := confValue.Kind()
+		if confKind != destKind {
+			dType := dest.Type()
+			cType := confValue.Type()
+			errorPanic("%s: target type %v != conf type %v", path, dType, cType)
+		}
+		dest.Set(confValue)
+	case reflect.String:
+		conf = replaceValue(conf.(string))
 		confValue := reflect.ValueOf(conf)
 		confKind := confValue.Kind()
 		if confKind != destKind {
