@@ -97,20 +97,20 @@ func normalizeKey(s string) string {
 }
 
 func replaceKey(s string) string {
-	if s == "$hostname" {
+	if strings.Contains(s, "$hostname") {
 		hostname, error := os.Hostname()
 		if error != nil {
 			errorPanic("Error while retrieving the hostname: %s", error)
 		}
 
-		return hostname
+		return strings.Replace(s, "$hostname", hostname, -1)
 	}
 
 	return s
 }
 
 func replaceValue(s string) string {
-	if s == "$public_hostname" {
+	if strings.Contains(s, "$public_hostname") {
 		content, err := ioutil.ReadFile("/etc/public_hostname")
 		if err != nil {
 			fmt.Println(err)
@@ -118,7 +118,7 @@ func replaceValue(s string) string {
 		}
 
 		public_hostname := strings.TrimSuffix(string(content), "\n")
-		return public_hostname
+		return strings.Replace(s, "$public_hostname", public_hostname, -1)
 	}
 
 	return s
