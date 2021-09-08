@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,8 @@ func errorPanic(format string, a ...interface{}) {
 }
 
 var confData map[interface{}]interface{}
+var confId string
+var confWithIdRegex *regexp.Regexp
 
 func init() {
 	confFile, confReceived := os.LookupEnv("CONFOO_CONFIG")
@@ -31,6 +34,8 @@ func init() {
 		}
 	}
 
+	confId, _ = os.LookupEnv("CONFOO_ID")
+
 	data, err := ioutil.ReadFile(confFile)
 	if err != nil {
 		errorPanic(err.Error())
@@ -41,6 +46,8 @@ func init() {
 	if err != nil {
 		errorPanic("cannot decode yaml data")
 	}
+
+	confWithIdRegex = regexp.MustCompile(`(.*)\[(.*)\]$`)
 }
 
 //Configure loads the value of the path of the yml of the CONFOO_CONFIG_FILE into target
@@ -72,14 +79,44 @@ func ConfigureFromFile(ymlFile, path string, target interface{}) error {
 	return nil
 }
 
+func coerceIdentity(conf interface{}) {
+	confMap, ok := conf.(map[interface{}]interface{})
+	if ok {
+		for key, value := range confMap {
+			if _, ok := key.(string); !ok {
+				continue
+			}
+
+			coerceIdentity(value)
+			match := confWithIdRegex.FindSubmatch([]byte(key.(string)))
+			if match == nil {
+				continue
+			}
+			delete(confMap, key)
+			realKey := string(match[1])
+			identity := string(match[2])
+			if identity == confId {
+				confMap[realKey] = value
+			}
+		}
+	}
+	confList, ok := conf.([]interface{})
+	if ok {
+		for _, entry := range confList {
+			coerceIdentity(entry)
+		}
+	}
+}
+
 func getSubConf(path string, conf interface{}) interface{} {
+
+	coerceIdentity(conf)
 	subConf := conf
 	for _, p := range strings.Split(path, ".") {
 		m, ok := subConf.(map[interface{}]interface{})
 		if !ok {
 			errorPanic("%s: path not found", path)
 		}
-
 		subConf, ok = m[p]
 		if !ok {
 			return nil
