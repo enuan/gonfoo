@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -188,6 +189,13 @@ func configStruct(path string, dest reflect.Value, conf interface{}) {
 }
 
 func configPath(path string, dest reflect.Value, conf interface{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "panic while handling path %s: %v\n", path, r)
+			fmt.Fprintf(os.Stderr, string(debug.Stack()))
+			os.Exit(1)
+		}
+	}()
 	destKind := dest.Kind()
 	switch destKind {
 	case reflect.Ptr:
