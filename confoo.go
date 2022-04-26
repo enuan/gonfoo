@@ -216,7 +216,7 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 			cType := confValue.Type()
 			errorPanic("%s: target type %v != conf type %v", path, dType, cType)
 		}
-		dest.Set(confValue)
+		dest.Set(confValue.Convert(dest.Type()))
 	case reflect.String:
 		conf = replaceValue(conf.(string))
 		confValue := reflect.ValueOf(conf)
@@ -226,7 +226,7 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 			cType := confValue.Type()
 			errorPanic("%s: target type %v != conf type %v", path, dType, cType)
 		}
-		dest.Set(confValue)
+		dest.Set(confValue.Convert(dest.Type()))
 	case reflect.Slice:
 		dest.Set(dest.Slice(0, 0))
 		for i, el := range conf.([]interface{}) {
