@@ -242,7 +242,8 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 			kk = replaceKey(kk)
 			elVal := reflect.New(dest.Type().Elem())
 			configPath(path+"."+kk, elVal, el)
-			dest.SetMapIndex(reflect.ValueOf(kk), elVal.Elem())
+			convertedConfValue := reflect.ValueOf(kk).Convert(dest.Type().Key())
+			dest.SetMapIndex(convertedConfValue, elVal.Elem())
 		}
 	default:
 		errorPanic("%s: conf type %v not handled", path, dest.Type())
