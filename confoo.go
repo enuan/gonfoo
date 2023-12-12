@@ -51,7 +51,7 @@ func init() {
 	confWithIdRegex = regexp.MustCompile(`(.*)\[(.*)\]$`)
 }
 
-//Configure loads the value of the path of the yml of the CONFOO_CONFIG_FILE into target
+// Configure loads the value of the path of the yml of the CONFOO_CONFIG_FILE into target
 func Configure(path string, target interface{}) {
 	subConf := getSubConf(path, confData)
 	if subConf != nil {
@@ -59,7 +59,7 @@ func Configure(path string, target interface{}) {
 	}
 }
 
-//ConfigureFromFile reads ymlFile and loads the value of the path into target
+// ConfigureFromFile reads ymlFile and loads the value of the path into target
 func ConfigureFromFile(ymlFile, path string, target interface{}) error {
 
 	data, err := ioutil.ReadFile(ymlFile)
@@ -229,6 +229,9 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 		dest.Set(confValue.Convert(dest.Type()))
 	case reflect.Slice:
 		dest.Set(dest.Slice(0, 0))
+		if conf == nil {
+			return
+		}
 		for i, el := range conf.([]interface{}) {
 			idx := strconv.Itoa(i)
 			elVal := reflect.New(dest.Type().Elem())
@@ -237,6 +240,9 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 		}
 	case reflect.Map:
 		dest.Set(reflect.MakeMap(dest.Type()))
+		if conf == nil {
+			return
+		}
 		for k, el := range conf.(map[interface{}]interface{}) {
 			kk := k.(string)
 			kk = replaceKey(kk)
