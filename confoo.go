@@ -3,6 +3,7 @@ package confoo
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"reflect"
 	"regexp"
@@ -15,12 +16,6 @@ import (
 
 const confVar = "CONFOO_CONFIG or CONFOO_CONFIG_FILE"
 
-func errorPanic(format string, a ...interface{}) {
-	m := fmt.Sprintf(format, a...)
-	m2 := "CONFOO - " + m
-	panic(m2)
-}
-
 var confData map[interface{}]interface{}
 var confId string
 var confWithIdRegex *regexp.Regexp
@@ -31,21 +26,21 @@ func init() {
 		confFile, confReceived = os.LookupEnv("CONFOO_CONFIG_FILE")
 
 		if !confReceived {
-			errorPanic(confVar + " is not set")
+			log.Panicf("CONFOO: %s is not set", confVar)
 		}
 	}
 
 	confId, _ = os.LookupEnv("CONFOO_ID")
 
-	data, err := ioutil.ReadFile(confFile)
+	data, err := os.ReadFile(confFile)
 	if err != nil {
-		errorPanic(err.Error())
+		log.Panicf("CONFOO: cannot read file %s: %s", confFile, err)
 	}
 
 	confData = make(map[interface{}]interface{})
-	err = yaml.Unmarshal(data, &confData)
+	err = yaml.UnmarshalStrict(data, &confData)
 	if err != nil {
-		errorPanic("cannot decode yaml data")
+		log.Panicf("CONFOO: cannot decode yaml data: %s", err)
 	}
 
 	confWithIdRegex = regexp.MustCompile(`(.*)\[(.*)\]$`)
@@ -116,7 +111,7 @@ func getSubConf(path string, conf interface{}) interface{} {
 	for _, p := range strings.Split(path, ".") {
 		m, ok := subConf.(map[interface{}]interface{})
 		if !ok {
-			errorPanic("%s: path not found", path)
+			log.Panicf("CONFOO: path not found: %s", path)
 		}
 		subConf, ok = m[p]
 		if !ok {
@@ -138,7 +133,7 @@ func replaceKey(s string) string {
 	if strings.Contains(s, "$hostname") {
 		hostname, error := os.Hostname()
 		if error != nil {
-			errorPanic("Error while retrieving the hostname: %s", error)
+			log.Panicf("CONFOO: Error while retrieving the hostname: %s", error)
 		}
 
 		return strings.Replace(s, "$hostname", hostname, -1)
@@ -168,20 +163,18 @@ func configStruct(path string, dest reflect.Value, conf interface{}) {
 	}
 	confMap, ok := conf.(map[interface{}]interface{})
 	if !ok {
-		errorPanic("%s: expected map not found", path)
+		log.Panicf("CONFOO: expected map not found: %s", path)
 	}
 	for k, subConf := range confMap {
 		kk, ok := k.(string)
 		if !ok {
-			//FIXME log event if CONFOO_DEBUG is set
-			//errorPanic("%s.%v: map key is not a string", path, k)
+			log.Printf("CONFOO: map key is not a string: %s.%v", path, k)
 			continue
 		}
 		fieldName := normalizeKey(kk)
 		fieldVal := dest.FieldByName(fieldName)
 		if fieldVal.Kind() == reflect.Invalid {
-			//FIXME log event if CONFOO_DEBUG is set
-			//errorPanic("%s.%v: field not present in target struct", path, k)
+			log.Printf("CONFOO: field not present in target struct: %s.%v", path, k)
 			continue
 		}
 		configPath(path+"."+kk, dest.FieldByName(fieldName), subConf)
@@ -191,8 +184,8 @@ func configStruct(path string, dest reflect.Value, conf interface{}) {
 func configPath(path string, dest reflect.Value, conf interface{}) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Fprintf(os.Stderr, "panic while handling path %s: %v\n", path, r)
-			fmt.Fprintf(os.Stderr, string(debug.Stack()))
+			log.Printf("CONFOO: panic while handling path %s: %v", path, r)
+			log.Printf("CONFOO: stack: %s", string(debug.Stack()))
 			os.Exit(1)
 		}
 	}()
@@ -214,7 +207,7 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 		if confKind != destKind {
 			dType := dest.Type()
 			cType := confValue.Type()
-			errorPanic("%s: target type %v != conf type %v", path, dType, cType)
+			log.Panicf("CONFOO: target type %v != conf type %v", dType, cType)
 		}
 		dest.Set(confValue.Convert(dest.Type()))
 	case reflect.String:
@@ -224,7 +217,7 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 		if confKind != destKind {
 			dType := dest.Type()
 			cType := confValue.Type()
-			errorPanic("%s: target type %v != conf type %v", path, dType, cType)
+			log.Panicf("CONFOO: target type %v != conf type %v", dType, cType)
 		}
 		dest.Set(confValue.Convert(dest.Type()))
 	case reflect.Slice:
@@ -252,6 +245,6 @@ func configPath(path string, dest reflect.Value, conf interface{}) {
 			dest.SetMapIndex(convertedConfValue, elVal.Elem())
 		}
 	default:
-		errorPanic("%s: conf type %v not handled", path, dest.Type())
+		log.Panicf("CONFOO: conf type %v not handled: %s", dest.Type(), path)
 	}
 }
